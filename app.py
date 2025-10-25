@@ -92,12 +92,23 @@ def get_dataframe_from_sheet(wb: Workbook, sheet_name: str):
     data = []
     for row in ws.iter_rows(values_only=True):
         data.append(list(row))
+    
     # Detectar header da primeira linha
     if len(data) == 0:
         return pd.DataFrame()
+    
     # Se primeira linha parece cabeçalho (strings), usar como header
     header = data[0]
     df = pd.DataFrame(data[1:], columns=header)
+    
+    # Limpar tipos de dados para evitar problemas com PyArrow
+    for col in df.columns:
+        # Converter colunas com tipos mistos para string
+        if df[col].dtype == 'object':
+            df[col] = df[col].astype(str)
+            # Substituir 'None' e 'nan' por string vazia
+            df[col] = df[col].replace(['None', 'nan', 'NaN'], '')
+    
     return df
 
 def load_excel_file(file_content):
@@ -195,7 +206,7 @@ if uploaded is not None:
             st.subheader(f"Dados da aba {st.session_state.selected_sheet}")
             if st.session_state.selected_sheet in wb.sheetnames:
                 df_sheet = get_dataframe_from_sheet(wb, st.session_state.selected_sheet)
-                st.dataframe(df_sheet, use_container_width=True, height=500)
+                st.dataframe(df_sheet, width='stretch', height=500)
             else:
                 st.warning(f"A aba '{st.session_state.selected_sheet}' não foi encontrada no arquivo.")
         else:
@@ -231,7 +242,7 @@ if uploaded is not None:
         st.subheader(f"Prévia da aba {output_sheet}")
         if wb is not None and output_sheet in wb.sheetnames:
             df_out = get_dataframe_from_sheet(wb, output_sheet)
-            st.dataframe(df_out, use_container_width=True, height=500)
+            st.dataframe(df_out, width='stretch', height=500)
         else:
             st.info("Ainda não há aba processada para visualizar. Clique em 'Processar e atualizar aba'.")
 
