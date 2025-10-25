@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 from openpyxl import load_workbook
 from openpyxl.workbook.workbook import Workbook
+from zipfile import BadZipFile
 
 # ----------------------------
 # Utilidades
@@ -99,24 +100,59 @@ def get_dataframe_from_sheet(wb: Workbook, sheet_name: str):
     df = pd.DataFrame(data[1:], columns=header)
     return df
 
+def load_excel_file(file_content):
+    """
+    Carrega um arquivo Excel com tratamento de erro
+    """
+    try:
+        bio = io.BytesIO(file_content)
+        wb = load_workbook(bio)
+        return wb, None
+    except BadZipFile:
+        return None, "❌ Erro: O arquivo não é um Excel válido (.xlsx). Verifique se o arquivo não está corrompido."
+    except Exception as e:
+        return None, f"❌ Erro ao carregar arquivo: {str(e)}"
+
 # ----------------------------
 # Streamlit App
 # ----------------------------
-st.set_page_config(page_title="REAT-10 Extrator", layout="wide")
-st.title("Extrator de Números da REAT-10")
+st.set_page_config(page_title="Extrator de Números Excel", layout="wide")
+st.title("Extrator de Números de Planilhas Excel")
+
+# Informações sobre tipos de arquivo
+with st.expander("ℹ️ Informações sobre tipos de arquivo"):
+    st.markdown("""
+    **Tipos de arquivo suportados:**
+    - ✅ **.xlsx** - Excel moderno (recomendado)
+    
+    **Tipos NÃO suportados:**
+    - ❌ **.xls** - Excel antigo (versão 97-2003)
+    - ❌ **.csv** - Arquivos de texto
+    - ❌ **.ods** - OpenDocument
+    
+    **Se você tem um arquivo .xls:**
+    1. Abra no Excel
+    2. Salve como .xlsx (Arquivo → Salvar Como → Escolher formato .xlsx)
+    3. Faça upload do novo arquivo
+    """)
 
 with st.sidebar:
     st.header("Importar Planilha")
-    uploaded = st.file_uploader("Selecione o arquivo .xlsx", type=["xlsx"])
-    process_btn = st.button("Processar e atualizar aba EXTRAIDOS_REAT10")
+    uploaded = st.file_uploader("Selecione o arquivo Excel", type=["xlsx"], help="Apenas arquivos .xlsx são suportados")
+    
+    process_btn = st.button("Processar e atualizar aba")
 
 # Estado
 if "workbook_bytes" not in st.session_state:
     st.session_state.workbook_bytes = None
 if "report" not in st.session_state:
     st.session_state.report = None
+if "selected_sheet" not in st.session_state:
+    st.session_state.selected_sheet = None
+if "output_sheet_name" not in st.session_state:
+    st.session_state.output_sheet_name = "EXTRAIDOS_REAT10"
 
-tab1, tab2, tab3 = st.tabs(["Visualizar REAT-10", "EXTRAIDOS_REAT10 (visualização)", "Baixar arquivo modificado"])
+tab1, tab2, tab3 = st.tabs(["Visualizar Dados Originais", "Dados Processados", "Baixar arquivo modificado"])
 
 wb = None
 
@@ -124,25 +160,57 @@ if uploaded is not None:
     # Carregar workbook na memória
     content = uploaded.read()
     st.session_state.workbook_bytes = content
-    bio = io.BytesIO(content)
-    wb = load_workbook(bio)
+    wb, error_msg = load_excel_file(content)
+    
+    if wb is None:
+        st.error(error_msg)
+        st.info("💡 **Dicas para resolver:**")
+        st.info("• Verifique se o arquivo é realmente um Excel (.xlsx)")
+        st.info("• Tente salvar o arquivo novamente no Excel")
+        st.info("• Verifique se o arquivo não está corrompido")
+        st.info("• Certifique-se de que não é um arquivo .xls (versão antiga)")
+        st.stop()  # Para a execução se houver erro
+    
+    # Configurações após carregamento bem-sucedido
+    with st.sidebar:
+        st.subheader("Configurações")
+        
+        # Selecionar aba
+        available_sheets = wb.sheetnames
+        st.session_state.selected_sheet = st.selectbox(
+            "Selecione a aba para processar:",
+            available_sheets,
+            help="Escolha qual aba contém os dados que você quer processar"
+        )
+        
+        # Nome da aba de saída
+        st.session_state.output_sheet_name = st.text_input(
+            "Nome da aba de saída:",
+            value=st.session_state.output_sheet_name,
+            help="Nome da aba que será criada com os resultados"
+        )
 
     with tab1:
-        st.subheader("Dados da aba REAT-10")
-        if "REAT-10" in wb.sheetnames:
-            df_reat10 = get_dataframe_from_sheet(wb, "REAT-10")
-            st.dataframe(df_reat10, use_container_width=True, height=500)
+        if st.session_state.selected_sheet:
+            st.subheader(f"Dados da aba {st.session_state.selected_sheet}")
+            if st.session_state.selected_sheet in wb.sheetnames:
+                df_sheet = get_dataframe_from_sheet(wb, st.session_state.selected_sheet)
+                st.dataframe(df_sheet, use_container_width=True, height=500)
+            else:
+                st.warning(f"A aba '{st.session_state.selected_sheet}' não foi encontrada no arquivo.")
         else:
-            st.warning("A aba 'REAT-10' não foi encontrada no arquivo.")
+            st.info("Selecione uma aba na barra lateral para visualizar os dados.")
 
     if process_btn:
         if wb is None:
             st.error("Erro ao carregar workbook.")
-        elif "REAT-10" not in wb.sheetnames:
-            st.error("A aba 'REAT-10' não foi encontrada. Verifique o arquivo.")
+        elif not st.session_state.selected_sheet:
+            st.error("Selecione uma aba para processar.")
+        elif st.session_state.selected_sheet not in wb.sheetnames:
+            st.error(f"A aba '{st.session_state.selected_sheet}' não foi encontrada. Verifique o arquivo.")
         else:
             # Processar e atualizar aba
-            unique_numbers, last_row_src = create_or_update_extracted_sheet(wb, "REAT-10", "EXTRAIDOS_REAT10")
+            unique_numbers, last_row_src = create_or_update_extracted_sheet(wb, st.session_state.selected_sheet, st.session_state.output_sheet_name)
 
             # Salvar workbook modificado em memória
             out_buf = io.BytesIO()
@@ -151,22 +219,25 @@ if uploaded is not None:
 
             st.session_state.report = {
                 "unique_count": len(unique_numbers),
-                "last_row_src": last_row_src
+                "last_row_src": last_row_src,
+                "source_sheet": st.session_state.selected_sheet,
+                "output_sheet": st.session_state.output_sheet_name
             }
-            st.success(f"Aba EXTRAIDOS_REAT10 atualizada. Números únicos: {len(unique_numbers)} | Última linha da REAT-10: {last_row_src}")
+            st.success(f"Aba '{st.session_state.output_sheet_name}' atualizada. Números únicos: {len(unique_numbers)} | Última linha da '{st.session_state.selected_sheet}': {last_row_src}")
 
     # Visualização da aba gerada (se já foi processada nesta sessão)
     with tab2:
-        st.subheader("Prévia da aba EXTRAIDOS_REAT10")
-        if wb is not None and "EXTRAIDOS_REAT10" in wb.sheetnames:
-            df_out = get_dataframe_from_sheet(wb, "EXTRAIDOS_REAT10")
+        output_sheet = st.session_state.output_sheet_name
+        st.subheader(f"Prévia da aba {output_sheet}")
+        if wb is not None and output_sheet in wb.sheetnames:
+            df_out = get_dataframe_from_sheet(wb, output_sheet)
             st.dataframe(df_out, use_container_width=True, height=500)
         else:
-            st.info("Ainda não há aba EXTRAIDOS_REAT10 para visualizar. Clique em 'Processar e atualizar aba EXTRAIDOS_REAT10'.")
+            st.info("Ainda não há aba processada para visualizar. Clique em 'Processar e atualizar aba'.")
 
     # Download do arquivo atualizado
     with tab3:
-        st.subheader("Baixar arquivo Excel com a aba EXTRAIDOS_REAT10")
+        st.subheader("Baixar arquivo Excel modificado")
         if st.session_state.workbook_bytes:
             st.download_button(
                 label="Baixar .xlsx atualizado",
@@ -175,7 +246,9 @@ if uploaded is not None:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
             if st.session_state.report:
-                st.caption(f"Números únicos: {st.session_state.report['unique_count']} | Última linha REAT-10: {st.session_state.report['last_row_src']}")
+                report = st.session_state.report
+                st.caption(f"Números únicos: {report['unique_count']} | Última linha {report['source_sheet']}: {report['last_row_src']}")
+                st.caption(f"Aba processada: {report['source_sheet']} → {report['output_sheet']}")
         else:
             st.info("Após processar, o arquivo atualizado ficará disponível para download aqui.")
 else:
