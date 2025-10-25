@@ -163,7 +163,7 @@ if "selected_sheet" not in st.session_state:
 if "output_sheet_name" not in st.session_state:
     st.session_state.output_sheet_name = "EXTRAIDOS_REAT10"
 
-tab1, tab2, tab3 = st.tabs(["Visualizar Dados Originais", "Dados Processados", "Baixar arquivo modificado"])
+tab1, tab2, tab3 = st.tabs(["📊 Dados Originais", "📈 Dados Processados", "💾 Download"])
 
 wb = None
 
@@ -203,7 +203,7 @@ if uploaded is not None:
 
     with tab1:
         if st.session_state.selected_sheet:
-            st.subheader(f"Dados da aba {st.session_state.selected_sheet}")
+            st.subheader(f"Dados originais da aba '{st.session_state.selected_sheet}'")
             if st.session_state.selected_sheet in wb.sheetnames:
                 df_sheet = get_dataframe_from_sheet(wb, st.session_state.selected_sheet)
                 st.dataframe(df_sheet, width='stretch', height=500)
@@ -239,7 +239,8 @@ if uploaded is not None:
     # Visualização da aba gerada (se já foi processada nesta sessão)
     with tab2:
         output_sheet = st.session_state.output_sheet_name
-        st.subheader(f"Prévia da aba {output_sheet}")
+        source_sheet = st.session_state.selected_sheet if st.session_state.selected_sheet else "aba selecionada"
+        st.subheader(f"Dados processados da aba '{source_sheet}' → '{output_sheet}'")
         if wb is not None and output_sheet in wb.sheetnames:
             df_out = get_dataframe_from_sheet(wb, output_sheet)
             st.dataframe(df_out, width='stretch', height=500)
