@@ -1,18 +1,27 @@
-# Extrator de Números da REAT-10
+# Extrator de Números de Planilhas Excel
 
-Este aplicativo Streamlit permite processar planilhas Excel com dados da REAT-10 e extrair números únicos com informações sobre consultores.
+Este aplicativo Streamlit permite processar qualquer aba de planilhas Excel e extrair números únicos com informações sobre consultores.
 
 ## Funcionalidades
 
 - **Importar planilha Excel**: Upload de arquivos .xlsx
-- **Processar aba REAT-10**: Extrai números da coluna B (incluindo sequências com "-")
-- **Criar aba EXTRAIDOS_REAT10**: Gera nova aba com:
+- **Seleção de aba**: Escolha qual aba da planilha processar
+- **Extração de números**: Extrai números da coluna B (incluindo sequências com "-")
+- **Criação de aba de resultados**: Gera nova aba com:
   - NUMERO: números únicos em ordem
-  - ENCONTRADO_REAT10: fórmula que verifica se o número existe
-  - OCORRENCIAS_REAT10: quantidade de consultores que contêm o número
+  - ENCONTRADO_[ABA]: fórmula que verifica se o número existe
+  - OCORRENCIAS_[ABA]: quantidade de consultores que contêm o número
   - CONSULTORES: lista de consultores onde o número aparece
-- **Visualização**: Interface para visualizar os dados
-- **Download**: Baixar arquivo Excel modificado
+- **Visualização dinâmica**: Interface para visualizar dados originais e processados
+- **Download personalizado**: Baixar arquivo Excel modificado
+
+## ✨ Novas Funcionalidades
+
+- **Seleção flexível de abas**: Processe qualquer aba da planilha, não apenas REAT-10
+- **Nomes personalizáveis**: Escolha o nome da aba de resultados
+- **Interface dinâmica**: Títulos e visualizações se adaptam à aba selecionada
+- **Tratamento de erros robusto**: Mensagens claras para problemas comuns
+- **Compatibilidade total**: Funciona com qualquer estrutura de planilha Excel
 
 ## Instalação
 
@@ -47,27 +56,35 @@ Este aplicativo Streamlit permite processar planilhas Excel com dados da REAT-10
 1. **Acesse o aplicativo**: O Streamlit abrirá automaticamente no navegador (geralmente em `http://localhost:8501`)
 
 2. **Importar arquivo**: 
-   - Na barra lateral, clique em "Selecione o arquivo .xlsx"
-   - Escolha sua planilha Excel que contém a aba "REAT-10"
+   - Na barra lateral, clique em "Selecione o arquivo Excel"
+   - Escolha sua planilha Excel (.xlsx)
 
-3. **Visualizar dados originais**:
-   - Na aba "Visualizar REAT-10", você pode ver os dados originais
+3. **Selecionar aba para processar**:
+   - Após o upload, escolha qual aba da planilha você quer processar
+   - Personalize o nome da aba de saída (padrão: "EXTRAIDOS_REAT10")
 
-4. **Processar dados**:
-   - Clique no botão "Processar e atualizar aba EXTRAIDOS_REAT10"
+4. **Visualizar dados originais**:
+   - Na aba "📊 Dados Originais", você pode ver os dados da aba selecionada
+
+5. **Processar dados**:
+   - Clique no botão "Processar e atualizar aba"
    - Aguarde o processamento
 
-5. **Visualizar resultados**:
-   - Na aba "EXTRAIDOS_REAT10 (visualização)", veja os dados processados
+6. **Visualizar resultados**:
+   - Na aba "📈 Dados Processados", veja os dados extraídos e processados
 
-6. **Baixar arquivo**:
-   - Na aba "Baixar arquivo modificado", clique em "Baixar .xlsx atualizado"
+7. **Baixar arquivo**:
+   - Na aba "💾 Download", clique em "Baixar .xlsx atualizado"
 
 ## Estrutura esperada do arquivo Excel
 
-O arquivo deve conter uma aba chamada **"REAT-10"** com:
+O arquivo deve conter uma aba com dados estruturados da seguinte forma:
 - **Coluna A**: Nomes dos consultores
 - **Coluna B**: Sequências de números (podem conter hífens, ex: "123-456-789")
+
+**Exemplos de abas que podem ser processadas:**
+- REAT-10, VENDAS, DADOS_2024, RELATORIO, CONSULTORES, etc.
+- Qualquer aba que tenha a estrutura: consultores na coluna A e números na coluna B
 
 ## Requisitos do sistema
 
@@ -78,6 +95,11 @@ O arquivo deve conter uma aba chamada **"REAT-10"** com:
 
 ## Solução de problemas
 
-- **Erro "A aba 'REAT-10' não foi encontrada"**: Verifique se sua planilha tem uma aba exatamente com o nome "REAT-10"
+- **Erro "Arquivo não é um Excel válido"**: 
+  - Verifique se o arquivo é realmente .xlsx (não .xls)
+  - Tente salvar o arquivo novamente no Excel
+  - Certifique-se de que o arquivo não está corrompido
 - **Erro de dependências**: Execute `pip install -r requirements.txt` novamente
 - **Problemas de memória**: Para arquivos muito grandes, considere dividir os dados em arquivos menores
+- **Aba não encontrada**: Verifique se a aba selecionada existe na planilha
+- **Dados não processados**: Certifique-se de que a aba tem consultores na coluna A e números na coluna B
