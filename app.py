@@ -30,12 +30,12 @@ def build_number_to_consultant_map(df_reat10_raw: pd.DataFrame):
             s.add(cons)
     return num_to_consultants
 
-def create_or_update_extracted_sheet(wb: Workbook, sheet_source: str = "REAT-10", sheet_out: str = "EXTRAIDOS_REAT10"):
-    # Ler REAT-10 para mapear números -> consultores
+def create_or_update_extracted_sheet(wb: Workbook, sheet_source: str, sheet_out: str):
+    # Ler aba fonte para mapear números -> consultores
     ws_src = wb[sheet_source]
     last_row_src = ws_src.max_row
 
-    # Carregar REAT-10 em DataFrame bruto (sem header)
+    # Carregar aba fonte em DataFrame bruto (sem header)
     # Como estamos em memória com openpyxl, vamos montar um DF manualmente
     data = []
     for r in ws_src.iter_rows(values_only=True):
@@ -55,8 +55,8 @@ def create_or_update_extracted_sheet(wb: Workbook, sheet_source: str = "REAT-10"
 
     # Cabeçalhos
     ws_out.cell(row=1, column=1, value="NUMERO")
-    ws_out.cell(row=1, column=2, value="ENCONTRADO_REAT10")
-    ws_out.cell(row=1, column=3, value="OCORRENCIAS_REAT10")
+    ws_out.cell(row=1, column=2, value=f"ENCONTRADO_{sheet_source}")
+    ws_out.cell(row=1, column=3, value=f"OCORRENCIAS_{sheet_source}")
     ws_out.cell(row=1, column=4, value="CONSULTORES")
 
     # Intervalo de busca para a fórmula
@@ -67,7 +67,7 @@ def create_or_update_extracted_sheet(wb: Workbook, sheet_source: str = "REAT-10"
         ws_out.cell(row=i, column=1, value=num)
 
         # Fórmula que considera números dentro de sequências com '-'
-        # =SUMPRODUCT(--ISNUMBER(SEARCH("-"&A2&"-","-"&SUBSTITUTE('REAT-10'!$B$1:$B$28," ","")&"-")))>0
+        # =SUMPRODUCT(--ISNUMBER(SEARCH("-"&A2&"-","-"&SUBSTITUTE('ABA_FONTE'!$B$1:$B$28," ","")&"-")))>0
         formula = f'=SUMPRODUCT(--ISNUMBER(SEARCH("-"&A{i}&"-","-"&SUBSTITUTE({lookup_range}," ","")&"-")))>0'
         ws_out.cell(row=i, column=2, value=formula)
 
@@ -161,7 +161,7 @@ if "report" not in st.session_state:
 if "selected_sheet" not in st.session_state:
     st.session_state.selected_sheet = None
 if "output_sheet_name" not in st.session_state:
-    st.session_state.output_sheet_name = "EXTRAIDOS_REAT10"
+    st.session_state.output_sheet_name = "EXTRAIDOS"
 
 tab1, tab2, tab3 = st.tabs(["📊 Dados Originais", "📈 Dados Processados", "💾 Download"])
 
